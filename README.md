@@ -32,18 +32,38 @@
 ### 3.消息发送有延时，秒级，消息量大时可能更长。
 
 ## 四.使用方法
+### 使用步骤
++ 1.针对每个业务名称及bizName建表
+```
+CREATE TABLE `consistent_message` (
+  `id` varchar(32) NOT NULL COMMENT '唯一ID',
+  `content` text NOT NULL COMMENT '业务名称',
+  `create_time` timestamp NOT NULL DEFAULT NULL COMMENT '创建时间',
+  `execute_time` timestamp NOT NULL DEFAULT NULL COMMENT '执行时间',
+  `business_code` varchar(255) DEFAULT NULL COMMENT '消息对应业务订单号',
+  `state` int(1) DEFAULT '0' COMMENT '消息状态(0 初始化 1 发送成功 2处理中)',
+  `repeat_count` int(11) DEFAULT '0' COMMENT '重复发送次数',
+  `content_class` varchar(255) DEFAULT NULL COMMENT '消息对应的类名',
+  PRIMARY KEY (`id`)
+) COMMENT '消息表，用于将消息可靠的发送到mq';
+```
++ 2.在要拦截的方法上添加`@ConsistentMessage_$_If_Change_This_Method_Definition_Please_Inform`注解
++ 3.spring配置文件中配置上每个要拦截的方法,要与添加注解的方法一致
++ 4.实现`AbstractMessageConverter`类中`convertMessage`方法做_拦截事件_到_消息_的转换
 
->1.spring xml方法拦截配置、代码注解配置，通过此双重配置和启动时校验，减少配置与代码分离导致的：代码变动而xml配置没有相应变动的隐藏性问题。
-2.如果重写的AbstractMessageConverter返回的结果为null，则本次拦截不当做消息持久化，即忽略，若想将此种情况记录下来，可设置AbstractMessageConverter的logIgnored属性为true.
-3.拦截的方法一般为dao中方法，一般会有int型返回结果标识本次操作是否修改的数据，对于返回0的情况，即没有修改的实际数据，如果需要忽略，可对convertMessage方法中的result参数
+###注意点
+>+ 1.spring xml方法拦截配置、代码注解配置，通过此双重配置和启动时校验，减少配置与代码分离导致的：代码变动而xml配置没有相应变动的隐藏性问题。
++ 2.如果重写的AbstractMessageConverter返回的结果为null，则本次拦截不当做消息持久化，即忽略，若想将此种情况记录下来，可设置AbstractMessageConverter的logIgnored属性为true.
++ 3.拦截的方法一般为dao中方法，一般会有int型返回结果标识本次操作是否修改的数据，对于返回0的情况，即没有修改的实际数据，如果需要忽略，可对convertMessage方法中的result参数
 做判断 ：
 ```java
-if (!(result instanceof Integer) || (Integer) result == 0) {//只对Integer类型做判断,因为mybatis dml操作返回的都是int类型
+if (!(result instanceof Integer) || (Integer) result == 0) {
+//只对Integer类型做判断,因为mybatis dml操作返回的都是int类型
     return null;
 }
 ```
-4.使用者可扩展该接口并配置在SenderConfig中，以取代默认的将消息发送到rocketmq。__即不一定非要将消息发送到MQ__
-5.ConsistentMessageSessionContextHolder，可通过此类放置一些属性到上下文中，放入属性可在MessageConverter中获取，在拦截结束后被清除。
++ 4.使用者可扩展该接口并配置在SenderConfig中，以取代默认的将消息发送到rocketmq。__即不一定非要将消息发送到MQ__
++ 5.ConsistentMessageSessionContextHolder，可通过此类放置一些属性到上下文中，放入属性可在MessageConverter中获取，在拦截结束后被清除。
 
 
 # spring配置
