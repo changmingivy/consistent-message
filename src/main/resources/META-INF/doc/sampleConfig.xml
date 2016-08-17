@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <bean id="cashOrderMessageConverter" class="com.test.util.CashOrderMessageConverter">
+        <property name="specifiedClass" value="com.test.dal.dataobject.CashOrder"/>
+    </bean>
+    <bean id="consistentMessageApplicationContext"
+          class="com.lanyejingyu.component.consistentmsg.core.ApplicationContext">
+        <property name="requiredTransaction" ref="transactionTemplate"/>
+        <property name="consistentMessageAutoProxyCreator" ref="consistentMessageAutoProxyCreator"/>
+        <property name="messageStore">
+            <bean class="com.lanyejingyu.component.consistentmsg.store.DefaultDBStore"/>
+        </property>
+        <property name="senderConfigs">
+            <array>
+                <bean class="com.lanyejingyu.component.consistentmsg.config.SenderConfig">
+                    <property name="bizName" value="BIZ_MONITOR_MESSAGE"/>
+                    <property name="fetchSize" value="400"></property>
+                    <property name="sender">
+                        <bean class="com.lanyejingyu.component.consistentmsg.sender.RocketMQSender">
+                            <property name="groupId" value="P_BIZ_MONITOR_MESSAGE_PAY"/>
+                            <property name="topic" value="BIZ_MONITOR_MESSAGE"/>
+                            <property name="nameServerAddress" value="${rocket.mq.namesrvAddr}"/>
+                        </bean>
+                    </property>
+                </bean>
+            </array>
+        </property>
+        <property name="interceptedMethodConfigs">
+            <array>
+                <bean class="com.lanyejingyu.component.consistentmsg.config.InterceptedMethodConfig">
+                    <property name="methodName" value="com.test.dal.dao.impl.CashOrderDAOImpl.insert"/>
+                    <property name="parameterTypes">
+                        <array>
+                            <value>com.test.dal.dataobject.CashOrder</value>
+                        </array>
+                    </property>
+                    <property name="converters">
+                        <array>
+                            <ref bean="cashOrderMessageConverter"/>
+                        </array>
+                    </property>
+                </bean>
+                <bean class="com.lanyejingyu.component.consistentmsg.config.InterceptedMethodConfig">
+                    <property name="methodName" value="com.test.dal.dao.impl.CashOrderDAOImpl.updateById"/>
+                    <property name="parameterTypes">
+                        <array>
+                            <value>com.test.dal.dataobject.CashOrder</value>
+                        </array>
+                    </property>
+                    <property name="converters">
+                        <array>
+                            <ref bean="cashOrderMessageConverter"/>
+                        </array>
+                    </property>
+                </bean>
+            </array>
+        </property>
+    </bean>
+
+    <bean id="consistentMessageAutoProxyCreator" class="com.lanyejingyu.component.consistentmsg.intercept.ConsistentMessageAutoProxyCreator">
+        <property name="interceptorNames">
+            <array>
+                <value>consistentMessageInterceptor</value>
+            </array>
+        </property>
+    </bean>
+
+    <bean id="consistentMessageInterceptor" class="com.lanyejingyu.component.consistentmsg.intercept.ConsistentMessageInterceptor"/>
+</beans>
