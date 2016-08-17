@@ -21,3 +21,5 @@
 + 1.拦截方法,解析参数
 + 2.事务中将所拦截方法及参数入库
 + 3.异步捞取消息发送到rocketMQ；
+![图片介绍](https://github.com/lanyejingyu/consistent-message/blob/master/doc/consistentmessage.png)
+
